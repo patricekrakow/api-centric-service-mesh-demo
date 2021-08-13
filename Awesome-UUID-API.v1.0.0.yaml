@@ -1,0 +1,33 @@
+swagger: '2.0'
+info:
+  title: Awesome UUID API
+  description: This awesome API allows you to create a UUID (Universally Unique IDentifier) version 4.
+  contact:
+    name: Patrice Krakow
+    email: patrice.krakow@ing.com
+  version: 1.0.0
+host: httpbin.org
+basePath: /
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /uuid:
+    get:
+      summary: Return a UUID4.
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/UUID'
+definitions:
+  UUID:
+    type: object
+    required:
+      - uuid
+    properties:
+      uuid:
+        type: string
