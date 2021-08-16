@@ -29,7 +29,7 @@ spec:
       serviceAccountName: curl-sa
       containers:
       - name: curl-co
-        image: busybox
-        args:
+        image: curlimages/curl
+        command:
         - sleep
-        - "3600"
+        - 1h
