@@ -33,4 +33,4 @@ spec:
         command:
         - /bin/sh
         - -c
-        - sleep 2h
+        - while curl --no-progress-meter http://httpbin.httpbin-ns/uuid; do sleep 1.0; done;
