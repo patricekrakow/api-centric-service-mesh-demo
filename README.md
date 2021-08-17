@@ -1,5 +1,18 @@
 # Demo of an API-Centric Server Mesh
 
+<https://www.katacoda.com/patrice1972/scenarios/kubernetes-hello-world>
+
+```text
+$ git clone https://github.com/patricekrakow/api-centric-service-mesh-demo.git
+Cloning into 'api-centric-service-mesh-demo'...
+remote: Enumerating objects: 49, done.
+remote: Counting objects: 100% (49/49), done.
+remote: Compressing objects: 100% (49/49), done.
+remote: Total 49 (delta 26), reused 0 (delta 0), pack-reused 0
+Unpacking objects: 100% (49/49), done.
+$ cd api-centric-service-mesh-demo/
+```
+
 ## API
 
 ...
@@ -53,6 +66,35 @@ $ curl localhost/uuid
 Notice that we are now using `localhost` as a hostname, and not `httpbin.org` anymore as we are using the **internal** implementation. We will come back on this important point later.
 
 ### Kubernetes
+
+```text
+$ kubectl apply -f httpbin.1st.yaml
+namespace/httpbin-ns created
+serviceaccount/httpbin-sa created
+deployment.apps/httbin-deploy created
+```
+
+```text
+$ kubectl apply -f curl.1st.yaml
+namespace/curl-ns created
+serviceaccount/curl-sa created
+deployment.apps/curl-deploy created
+```
+
+```text
+$ kubectl apply -f httpbin.2nd.yaml
+namespace/httpbin-ns unchanged
+serviceaccount/httpbin-sa unchanged
+deployment.apps/httbin-deploy unchanged
+service/httpbin created
+```
+
+```text
+$ kubectl apply -f curl.2nd.yaml
+namespace/curl-ns unchanged
+serviceaccount/curl-sa unchanged
+deployment.apps/curl-deploy configured
+```
 
 ## Istio
 
@@ -136,6 +178,31 @@ istiod-6c565d48b8-htpmm                1/1     Running   0          25s
 ```
 
 > It can take some time after the creation of the Istio operatror, for the `istiod` and `istio-ingressgateway` to be created.
+
+#### Deploy the Envoy sidecar proxies
+
+```text
+$ kubectl apply -f httpbin.3rd.yaml
+namespace/httpbin-ns configured
+serviceaccount/httpbin-sa unchanged
+deployment.apps/httbin-deploy unchanged
+service/httpbin unchanged
+```
+
+```text
+$ kubectl apply -f curl.3rd.yaml
+namespace/curl-ns configured
+serviceaccount/curl-sa unchanged
+deployment.apps/curl-deploy unchanged
+```
+
+```text
+$ kubectl delete pods httbin-deploy-6bf8fcb5c5-k6kmn -n httpbin-ns
+pod "httbin-deploy-6bf8fcb5c5-k6kmn" deleted
+
+$ kubectl delete pods curl-deploy-758c5bf7f7-xcsch -n curl-ns
+pod "curl-deploy-758c5bf7f7-xcsch" deleted
+```
 
 #### Install and Congigure Prometheus
 
@@ -222,4 +289,47 @@ destinationrule.networking.istio.io/kiali created
 
 ```text
 echo http://kiali.${INGRESS_DOMAIN}
+```
+
+## API Centric Service Mesh
+
+```text
+$ kubectl apply -f mesh.A.yaml
+serviceentry.networking.istio.io/httpbin-org-service-entry created
+virtualservice.networking.istio.io/httpbin-org-virtual-service created
+```
+
+```text
+$ kubectl apply -f curl.API.yaml
+serviceentry.networking.istio.io/httpbin-org-service-entry created
+virtualservice.networking.istio.io/httpbin-org-virtual-service created
+```
+
+```text
+$ kubectl apply -f node-uuid.yaml
+...
+```
+
+```text
+$ kubectl apply -f mesh.A.80-20.yaml
+serviceentry.networking.istio.io/httpbin-org-service-entry unchanged
+virtualservice.networking.istio.io/httpbin-org-virtual-service configured
+```
+
+```text
+$ kubectl apply -f mesh.A.50-50.yaml
+serviceentry.networking.istio.io/httpbin-org-service-entry unchanged
+virtualservice.networking.istio.io/httpbin-org-virtual-service configured
+```
+
+```text
+$ kubectl apply -f mesh.A.20-80.yaml
+serviceentry.networking.istio.io/httpbin-org-service-entry unchanged
+virtualservice.networking.istio.io/httpbin-org-virtual-service configured
+```
+
+```text
+$ kubectl apply -f mesh.B.yaml
+serviceentry.networking.istio.io/httpbin-org-service-entry created
+virtualservice.networking.istio.io/httpbin-org-virtual-service created
 ```

@@ -35,4 +35,4 @@ spec:
         command:
         - /bin/sh
         - -c
-        - while curl --no-progress-meter http://httpbin.org/uuid; do sleep 0.5; done;
+        - while curl --no-progress-meter http://httpbin.org/uuid; do sleep 0.2; done;
