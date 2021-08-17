@@ -1,6 +1,18 @@
 # Demo of an API-Centric Server Mesh
 
-<https://www.katacoda.com/patrice1972/scenarios/kubernetes-hello-world>
+## Prerequisites
+
+You need a working environment with Docker and Kubernetes, or you can use our [Katacoda Kubernetes Playground](https://www.katacoda.com/patrice1972/scenarios/kubernetes-hello-world).
+
+Verify that Kubernetes is running properly:
+
+```text
+$ kubectl version --short
+Client Version: v1.18.0
+Server Version: v1.18.0
+```
+
+Then, download all the files needed for this demo from GitHub:
 
 ```text
 $ git clone https://github.com/patricekrakow/api-centric-service-mesh-demo.git
@@ -13,13 +25,80 @@ Unpacking objects: 100% (49/49), done.
 $ cd api-centric-service-mesh-demo/
 ```
 
+You are ready for our **API-Centric Server Mesh** demo!
+
 ## API
 
-...
+Let's start by desiging an awesome API that allows the create [**U**niversally **U**nique **ID**entifiers (UUIDs)](https://en.wikipedia.org/wiki/Universally_unique_identifier).
+
+### Noun(s)
+
+`/uuid`
+
+### Verb(s)
+
+`GET /uuid`
+
+### Hostname
+
+`GET httpbin.org/uuid`
+
+### OpenAPI
+
+```yaml
+swagger: '2.0'
+info:
+  title: Awesome UUID API
+  description: This awesome API allows you to create a UUID (Universally Unique IDentifier) version 4.
+  contact:
+    name: Patrice Krakow
+    email: patrice.krakow@ing.com
+  version: 1.0.0
+host: httpbin.org
+basePath: /
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /uuid:
+    get:
+      summary: Return a UUID4.
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/UUID'
+definitions:
+  UUID:
+    type: object
+    required:
+      - uuid
+    properties:
+      uuid:
+        type: string
+```
+
+### Bezos Mandate
+
+_5. All service interfaces, without exception, must be designed from the ground up to be externalizable. That is to say, the team must plan and design to be able to expose the interface to developers in the outside world. No exceptions._
+
+```text
+$ curl httpbin.org/uuid
+{
+  "uuid": "51b517aa-e8eb-442c-8aae-2b93e771916a"
+}
+```
 
 ## Docker & Kubernetes
 
+But, before this API was live on the Internet, we had to implement it on our laptop... Let's go back to that stage.
+
 ### Docker
+
+Thanks to Docker, we will speed up the implementation phase ;-)
 
 Let's first verify that docker is installed:
 
@@ -66,6 +145,8 @@ $ curl localhost/uuid
 Notice that we are now using `localhost` as a hostname, and not `httpbin.org` anymore as we are using the **internal** implementation. We will come back on this important point later.
 
 ### Kubernetes
+
+Let's now use Kubernetes, so we can orchestrate containers for the server side, the client side, and much more...
 
 ```text
 $ kubectl apply -f httpbin.1st.yaml
