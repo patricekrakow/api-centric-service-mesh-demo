@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: httpbin-ns
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: httpbin-sa
+  namespace: httpbin-ns
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httbin-deploy
+  namespace: httpbin-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpbin
+      version: 1.0.0
+  template:
+    metadata:
+      labels:
+        app: httpbin
+        version: 1.0.0
+    spec:
+      serviceAccountName: httpbin-sa
+      containers:
+      - name: httpbin-co
+        image: kennethreitz/httpbin
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin
+  namespace: httpbin-ns
+spec:
+  selector:
+    app: httpbin
+    version: 1.0.0
+  ports:
+  - name: httpbin-http-port
+    protocol: TCP
+    port: 80
+    targetPort: 80

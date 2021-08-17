@@ -62,6 +62,7 @@ Notice that we are now using `localhost` as a hostname, and not `httpbin.org` an
 
 ```text
 $ curl -sL https://istio.io/downloadIstioctl | sh -
+
 Downloading istioctl-1.11.0 from https://github.com/istio/istio/releases/download/1.11.0/istioctl-1.11.0-linux-amd64.tar.gz ...
 istioctl-1.11.0-linux-amd64.tar.gz download complete!
 
@@ -132,4 +133,93 @@ $ kubectl get pods -n istio-system
 NAME                                   READY   STATUS    RESTARTS   AGE
 istio-ingressgateway-8565f9474-cksjs   1/1     Running   0          13s
 istiod-6c565d48b8-htpmm                1/1     Running   0          25s
+```
+
+> It can take some time after the creation of the Istio operatror, for the `istiod` and `istio-ingressgateway` to be created.
+
+#### Install and Congigure Prometheus
+
+```text
+$ kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.11/samples/addons/prometheus.yaml
+serviceaccount/prometheus created
+configmap/prometheus created
+clusterrole.rbac.authorization.k8s.io/prometheus created
+clusterrolebinding.rbac.authorization.k8s.io/prometheus created
+service/prometheus created
+deployment.apps/prometheus created
+```
+
+#### Install and Congigure Kiali
+
+```text
+$ kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.11/samples/addons/kiali.yaml
+serviceaccount/kiali created
+configmap/kiali created
+clusterrole.rbac.authorization.k8s.io/kiali-viewer created
+clusterrole.rbac.authorization.k8s.io/kiali created
+clusterrolebinding.rbac.authorization.k8s.io/kiali created
+role.rbac.authorization.k8s.io/kiali-controlplane created
+rolebinding.rbac.authorization.k8s.io/kiali-controlplane created
+service/kiali created
+deployment.apps/kiali created
+```
+
+```text
+export INGRESS_DOMAIN=2886795341-80-ollie02.environments.katacoda.com
+```
+
+```text
+$ cat <<EOF | kubectl apply -f -
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: kiali-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http-kiali
+      protocol: HTTP
+    hosts:
+    - "kiali.${INGRESS_DOMAIN}"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: kiali-vs
+  namespace: istio-system
+spec:
+  hosts:
+  - "kiali.${INGRESS_DOMAIN}"
+  gateways:
+  - kiali-gateway
+  http:
+  - route:
+    - destination:
+        host: kiali
+        port:
+          number: 20001
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: kiali
+  namespace: istio-system
+spec:
+  host: kiali
+  trafficPolicy:
+    tls:
+      mode: DISABLE
+---
+EOF
+gateway.networking.istio.io/kiali-gateway created
+virtualservice.networking.istio.io/kiali-vs created
+destinationrule.networking.istio.io/kiali created
+```
+
+```text
+echo http://kiali.${INGRESS_DOMAIN}
 ```
