@@ -1,0 +1,30 @@
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: httpbin-org-service-entry
+spec:
+  hosts:
+    - httpbin.org
+  location: MESH_INTERNAL
+  resolution: STATIC
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: httpbin-org-virtual-service
+spec:
+  hosts:
+    - httpbin.org
+  http:
+    - name: get-httpbin.org-uuid-route
+      match:
+        - method:
+            exact: GET
+          headers:
+            host:
+              exact: httpbin.org
+          uri:
+            exact: /uuid
+      route:
+        - destination:
+            host: node-uuid.node-uuid-ns.svc.cluster.local

@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: node-uuid-ns
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-uuid-sa
+  namespace: node-uuid-ns
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-uuid-deploy
+  namespace: node-uuid-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-uuid
+      version: 1.0.0
+  template:
+    metadata:
+      labels:
+        app: node-uuid
+        version: 1.0.0
+    spec:
+      serviceAccountName: node-uuid-sa
+      containers:
+      - name: node-uuid-co
+        image: patrice1972/node-uuid:1.0.0
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-uuid
+  namespace: node-uuid-ns
+spec:
+  selector:
+    app: node-uuid
+    version: 1.0.0
+  ports:
+  - name: node-uuid-http-port
+    protocol: TCP
+    port: 80
+    targetPort: 3000
