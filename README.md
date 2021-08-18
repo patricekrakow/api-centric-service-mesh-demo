@@ -218,8 +218,10 @@ $ kubectl logs httbin-deploy-6bf8fcb5c5-nl4jn -n httpbin-ns
 [2021-08-18 08:32:46 +0000] [8] [INFO] Booting worker with pid: 8
 ```
 
+Look at the created pod to determine the IP so we can call it later.
+
 ```text
-$ kubectl describe pod httbin-deploy-6bf8fcb5c5-nl4jn -n httpbin-ns
+$ kubectl describe -n httpbin-ns pod httbin
 Name:         httbin-deploy-6bf8fcb5c5-nl4jn
 Namespace:    httpbin-ns
 ...
@@ -293,10 +295,14 @@ httpbin-ns    httbin-deploy-6bf8fcb5c5-nl4jn             1/1     Running        
 ...
 ```
 
+Now shell into the running curl container to execute request. Replace the pod name with the one from `kubectl get pods -A`.
+
 ```text
 $ k exec -it curl-deploy-549648b7d6-kszw8 -n curl-ns -- /bin/sh
 / $
 ```
+
+Call the uuid endpoint on the ip of our running httpbin container. Remember the IP from the `kubectl describe -n httpbin-ns pod httbin ` command.
 
 ```text
 / $ curl http://10.244.1.3/uuid
@@ -347,6 +353,8 @@ serviceaccount/httpbin-sa unchanged
 deployment.apps/httbin-deploy unchanged
 service/httpbin created
 ```
+
+Shell into the curl container again and now call httpbin using the service address.
 
 ```text
 / $ curl http://httpbin.httpbin-ns/uuid
