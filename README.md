@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-You need a working environment with Docker and Kubernetes, or you can use our [Katacoda Kubernetes Playground](https://www.katacoda.com/patrice1972/scenarios/kubernetes-hello-world).
+You need a working environment with a connection to a  Kubernetes cluster, or you can use our [Katacoda Kubernetes Playground](https://www.katacoda.com/patrice1972/scenarios/kubernetes-hello-world).
 
 Verify that Kubernetes is running properly:
 
@@ -29,7 +29,7 @@ You are ready for our **API-Centric Server Mesh** demo!
 
 ## API
 
-Let's start by desiging an awesome API that allows the create [**U**niversally **U**nique **ID**entifiers (UUIDs)](https://en.wikipedia.org/wiki/Universally_unique_identifier).
+Let's start by desiging an awesome API that allows the creation of [**U**niversally **U**nique **ID**entifiers (UUIDs)](https://en.wikipedia.org/wiki/Universally_unique_identifier).
 
 ### Noun(s)
 
@@ -80,6 +80,8 @@ definitions:
       uuid:
         type: string
 ```
+
+This file is avaible from GitHub using the address <https://raw.githubusercontent.com/patricekrakow/api-centric-service-mesh-demo/main/Awesome-UUID-API.v1.0.0.oas2.0.yaml>, you can use this URL to test online tools like [ReDoc](https://redocly.github.io/redoc/) or [Swagger UI](https://petstore.swagger.io/).
 
 ### Bezos Mandate
 

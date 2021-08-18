@@ -9,7 +9,6 @@ info:
 host: httpbin.org
 basePath: /
 schemes:
-  - http
   - https
 consumes:
   - application/json
