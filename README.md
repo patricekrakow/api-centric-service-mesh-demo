@@ -22,6 +22,7 @@ remote: Counting objects: 100% (49/49), done.
 remote: Compressing objects: 100% (49/49), done.
 remote: Total 49 (delta 26), reused 0 (delta 0), pack-reused 0
 Unpacking objects: 100% (49/49), done.
+
 $ cd api-centric-service-mesh-demo/
 ```
 
@@ -131,7 +132,7 @@ Status: Downloaded newer image for kennethreitz/httpbin:latest
 [2021-08-13 14:20:32 +0000] [9] [INFO] Booting worker with pid: 9
 ```
 
-Then, within a new terminal you can test our API endpoint with `curl`:
+Then, within a new terminal you can test our local API endpoint with `curl`:
 
 ```text
 $ curl localhost/uuid
@@ -144,11 +145,56 @@ $ curl localhost/uuid
 }
 ```
 
-Notice that we are now using `localhost` as a hostname, and not `httpbin.org` anymore as we are using the **internal** implementation. We will come back on this important point later.
+Notice that we are now using `localhost` as a hostname, and not `httpbin.org` anymore as we are using it **internally**. We will come back on this important point later.
 
 ### Kubernetes
 
 Let's now use Kubernetes, so we can orchestrate containers for the server side, the client side, and much more...
+
+Let's first configure the server side:
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: httpbin-ns
+```
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: httpbin-sa
+  namespace: httpbin-ns
+```  
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httbin-deploy
+  namespace: httpbin-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpbin
+      version: 1.0.0
+  template:
+    metadata:
+      labels:
+        app: httpbin
+        version: 1.0.0
+    spec:
+      serviceAccountName: httpbin-sa
+      containers:
+      - name: httpbin-co
+        image: kennethreitz/httpbin
+        ports:
+        - containerPort: 80
+```
+
+We can configure all that in one go using the `httpbin.1st.yaml` file with the following command:
 
 ```text
 $ kubectl apply -f httpbin.1st.yaml
@@ -158,11 +204,141 @@ deployment.apps/httbin-deploy created
 ```
 
 ```text
+$ kubectl get pods -A
+NAMESPACE     NAME                                       READY   STATUS    RESTARTS   AGE
+httpbin-ns    httbin-deploy-6bf8fcb5c5-nl4jn             1/1     Running   0          39s
+...
+```
+
+```text
+$ kubectl logs httbin-deploy-6bf8fcb5c5-nl4jn -n httpbin-ns
+[2021-08-18 08:32:46 +0000] [1] [INFO] Starting gunicorn 19.9.0
+[2021-08-18 08:32:46 +0000] [1] [INFO] Listening at: http://0.0.0.0:80 (1)
+[2021-08-18 08:32:46 +0000] [1] [INFO] Using worker: gevent
+[2021-08-18 08:32:46 +0000] [8] [INFO] Booting worker with pid: 8
+```
+
+```text
+$ kubectl describe pod httbin-deploy-6bf8fcb5c5-nl4jn -n httpbin-ns
+Name:         httbin-deploy-6bf8fcb5c5-nl4jn
+Namespace:    httpbin-ns
+...
+Status:       Running
+IP:           10.244.1.3
+...
+Events:
+  ...
+  Normal  Started    3m4s   kubelet, node01    Started container httpbin-co
+```
+
+Let's now start the client side:
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: curl-ns
+```
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: curl-sa
+  namespace: curl-ns
+```
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: curl-deploy
+  namespace: curl-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: curl
+      version: 1.0.0
+  template:
+    metadata:
+      labels:
+        app: curl
+        version: 1.0.0
+    spec:
+      serviceAccountName: curl-sa
+      containers:
+      - name: curl-co
+        image: curlimages/curl
+        command:
+        - /bin/sh
+        - -c
+        - sleep 2h
+```
+
+We can configure all that in one go using the `curl.1st.yaml` file with the following command:
+
+```text
 $ kubectl apply -f curl.1st.yaml
 namespace/curl-ns created
 serviceaccount/curl-sa created
 deployment.apps/curl-deploy created
 ```
+
+```text
+$ kubectl get pods -A
+NAMESPACE     NAME                                       READY   STATUS             RESTARTS   AGE
+curl-ns       curl-deploy-549648b7d6-kszw8               1/1     Running            0          11s
+httpbin-ns    httbin-deploy-6bf8fcb5c5-nl4jn             1/1     Running            0          10m
+...
+```
+
+```text
+$ k exec -it curl-deploy-549648b7d6-kszw8 -n curl-ns -- /bin/sh
+/ $
+```
+
+```text
+/ $ curl http://10.244.1.3/uuid
+{
+  "uuid": "231a1b2a-2c77-48fc-bec9-6db3fb2e3e8f"
+} 
+```
+
+```text
+/ $ while curl http://10.244.1.3/uuid; do sleep 1.0; done;
+{
+  "uuid": "c0d668e8-de91-413d-b1cf-ab457dc2204d"
+}
+{
+  "uuid": "6302c15b-8eed-4133-8e21-fbc7a59b686b"
+}
+{
+  "uuid": "9c2b4f86-9aad-474d-8e5e-a33a2f4ecea8"
+}
+...
+```
+
+Using IP address is not really convenient and is even an issue if the _Pod_ crashes as the _ReplicaSet_ will create a new one with a different IP address. That's why you have _Service_ in Kubernetes which will create a hostname for the _Pod_ and automatically configure and update the internal DNS service of the Kubernetes cluster.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin
+  namespace: httpbin-ns
+spec:
+  selector:
+    app: httpbin
+    version: 1.0.0
+  ports:
+  - name: httpbin-http-port
+    protocol: TCP
+    port: 80
+    targetPort: 80
+```
+
+We can configure that using the `httpbin.2nd.yaml` file with the following command:
 
 ```text
 $ kubectl apply -f httpbin.2nd.yaml
@@ -173,10 +349,70 @@ service/httpbin created
 ```
 
 ```text
+/ $ curl http://httpbin.httpbin-ns/uuid
+{
+  "uuid": "3327448a-0a2c-4455-bae4-8950f41ddf55"
+}
+```
+
+Finally, let's change the configuration of `curl-co` container in order to fire 5 requests/second:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: curl-deploy
+  namespace: curl-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: curl
+      version: 1.0.0
+  template:
+    metadata:
+      labels:
+        app: curl
+        version: 1.0.0
+    spec:
+      serviceAccountName: curl-sa
+      containers:
+      - name: curl-co
+        image: curlimages/curl
+        command:
+        - /bin/sh
+        - -c
+        - while curl --no-progress-meter http://httpbin.httpbin-ns/uuid; do sleep 0.2; done;
+```
+
+We can configure that using the `curl.2nd.yaml` file with the following command:
+
+```text
 $ kubectl apply -f curl.2nd.yaml
 namespace/curl-ns unchanged
 serviceaccount/curl-sa unchanged
 deployment.apps/curl-deploy configured
+```
+
+```text
+$ k get pods -A
+NAMESPACE     NAME                                       READY   STATUS             RESTARTS   AGE
+curl-ns       curl-deploy-549648b7d6-kszw8               1/1     Terminating        0          15m
+curl-ns       curl-deploy-64d9c774c6-zs2jf               1/1     Running            0          9s
+httpbin-ns    httbin-deploy-6bf8fcb5c5-nl4jn             1/1     Running            0          26m
+...
+```
+
+```
+$ kubectl logs curl-deploy-64d9c774c6-zs2jf -n curl-ns --follow
+...
+{
+  "uuid": "ecadb5d5-ecbe-42f5-b74c-074f9586c665"
+}
+{
+  "uuid": "98d53ac4-b1ef-4090-a0fa-9d76facd1f3d"
+}
+...
 ```
 
 ## Istio
