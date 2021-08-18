@@ -422,8 +422,10 @@ $ kubectl logs curl-deploy-64d9c774c6-zs2jf -n curl-ns --follow
 1\. Download and install the latest release of the `istioctl` with `curl`:
 
 ```text
-$ curl -sL https://istio.io/downloadIstioctl | sh -
+curl -sL https://istio.io/downloadIstioctl | sh -
+```
 
+```text
 Downloading istioctl-1.11.0 from https://github.com/istio/istio/releases/download/1.11.0/istioctl-1.11.0-linux-amd64.tar.gz ...
 istioctl-1.11.0-linux-amd64.tar.gz download complete!
 
