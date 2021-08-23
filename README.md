@@ -24,6 +24,13 @@ remote: Total 49 (delta 26), reused 0 (delta 0), pack-reused 0
 Unpacking objects: 100% (49/49), done.
 
 $ cd api-centric-service-mesh-demo/
+$ ls
+Awesome-UUID-API.v1.0.0.oas2.0.yaml  httpbin.2nd.yaml   mesh.A.yaml
+curl.1st.yaml                        httpbin.3rd.yaml   mesh.B.yaml
+curl.2nd.yaml                        LICENSE            node-uuid.yaml
+curl.3rd.yaml                        mesh.A.20-80.yaml  one-istio-operator.yaml
+curl.API.yaml                        mesh.A.50-50.yaml  README.md
+httpbin.1st.yaml                     mesh.A.80-20.yaml
 ```
 
 You are ready for our **API-Centric Server Mesh** demo!
@@ -211,7 +218,7 @@ httpbin-ns    httbin-deploy-6bf8fcb5c5-nl4jn             1/1     Running   0    
 ```
 
 ```text
-$ kubectl logs httbin-deploy-6bf8fcb5c5-nl4jn -n httpbin-ns
+$ kubectl logs -n httpbin-ns httbin-deploy-6bf8fcb5c5-nl4jn 
 [2021-08-18 08:32:46 +0000] [1] [INFO] Starting gunicorn 19.9.0
 [2021-08-18 08:32:46 +0000] [1] [INFO] Listening at: http://0.0.0.0:80 (1)
 [2021-08-18 08:32:46 +0000] [1] [INFO] Using worker: gevent
@@ -219,7 +226,7 @@ $ kubectl logs httbin-deploy-6bf8fcb5c5-nl4jn -n httpbin-ns
 ```
 
 ```text
-$ kubectl describe pod httbin-deploy-6bf8fcb5c5-nl4jn -n httpbin-ns
+$ kubectl describe pod -n httpbin-ns httbin-deploy-6bf8fcb5c5-nl4jn
 Name:         httbin-deploy-6bf8fcb5c5-nl4jn
 Namespace:    httpbin-ns
 ...
@@ -294,7 +301,7 @@ httpbin-ns    httbin-deploy-6bf8fcb5c5-nl4jn             1/1     Running        
 ```
 
 ```text
-$ k exec -it curl-deploy-549648b7d6-kszw8 -n curl-ns -- /bin/sh
+$ kubectl exec -it -n curl-ns curl-deploy-549648b7d6-kszw8 -- /bin/sh 
 / $
 ```
 
@@ -395,7 +402,7 @@ deployment.apps/curl-deploy configured
 ```
 
 ```text
-$ k get pods -A
+$ kubectl get pods -A
 NAMESPACE     NAME                                       READY   STATUS             RESTARTS   AGE
 curl-ns       curl-deploy-549648b7d6-kszw8               1/1     Terminating        0          15m
 curl-ns       curl-deploy-64d9c774c6-zs2jf               1/1     Running            0          9s
@@ -403,8 +410,8 @@ httpbin-ns    httbin-deploy-6bf8fcb5c5-nl4jn             1/1     Running        
 ...
 ```
 
-```
-$ kubectl logs curl-deploy-64d9c774c6-zs2jf -n curl-ns --follow
+```text
+$ kubectl logs -n curl-ns --follow curl-deploy-64d9c774c6-zs2jf 
 ...
 {
   "uuid": "ecadb5d5-ecbe-42f5-b74c-074f9586c665"
@@ -502,6 +509,17 @@ istiod-6c565d48b8-htpmm                1/1     Running   0          25s
 
 #### Deploy the Envoy sidecar proxies
 
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: httpbin-ns
+  labels:
+    istio-injection: enabled
+```
+
+We can configure that using the `httpbin.3rd.yaml` file with the following command:
+
 ```text
 $ kubectl apply -f httpbin.3rd.yaml
 namespace/httpbin-ns configured
@@ -509,6 +527,17 @@ serviceaccount/httpbin-sa unchanged
 deployment.apps/httbin-deploy unchanged
 service/httpbin unchanged
 ```
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: curl-ns
+  labels:
+    istio-injection: enabled
+```
+
+We can configure that using the `curl.3rd.yaml` file with the following command:
 
 ```text
 $ kubectl apply -f curl.3rd.yaml
@@ -518,11 +547,39 @@ deployment.apps/curl-deploy unchanged
 ```
 
 ```text
-$ kubectl delete pods httbin-deploy-6bf8fcb5c5-k6kmn -n httpbin-ns
+$ kubectl get pods -A
+NAMESPACE     NAME                                       READY   STATUS             RESTARTS   AGE
+curl-ns       curl-deploy-549648b7d6-kszw8               1/1     Terminating        0          15m
+curl-ns       curl-deploy-64d9c774c6-zs2jf               1/1     Running            0          9s
+httpbin-ns    httbin-deploy-6bf8fcb5c5-nl4jn             1/1     Running            0          26m
+...
+```
+
+```text
+$ kubectl delete pods -n httpbin-ns httbin-deploy-6bf8fcb5c5-k6kmn 
 pod "httbin-deploy-6bf8fcb5c5-k6kmn" deleted
 
-$ kubectl delete pods curl-deploy-758c5bf7f7-xcsch -n curl-ns
+$ kubectl delete pods -n curl-ns curl-deploy-758c5bf7f7-xcsch 
 pod "curl-deploy-758c5bf7f7-xcsch" deleted
+```
+
+```text
+$ kubectl get pods -A
+NAMESPACE        NAME                                       READY   STATUS             RESTARTS   AGE
+curl-ns          curl-deploy-64d9c774c6-gfvpb               2/2     Running            0          9s
+httpbin-ns       httbin-deploy-6bf8fcb5c5-bxs9p             2/2     Running            0          21s
+...
+```
+
+```text
+$ kubectl logs -n curl-ns curl-deploy-64d9c774c6-zs2jf 
+...
+{
+  "uuid": "ecadb5d5-ecbe-42f5-b74c-074f9586c665"
+}
+{
+  "uuid": "98d53ac4-b1ef-4090-a0fa-9d76facd1f3d"
+}
 ```
 
 #### Install and Congigure Prometheus
@@ -612,6 +669,12 @@ destinationrule.networking.istio.io/kiali created
 echo http://kiali.${INGRESS_DOMAIN}
 ```
 
+1\. Select "Graph" in the left pane.
+
+2\. From the "Select Namespaces" dropbox, select "curl-ns" and "httpbin-ns".
+
+3\. From the "Display" dropbox, select "Traffic Rate", "Namespace Boxes" and "Traffic Animation".
+
 ## API Centric Service Mesh
 
 ```text
@@ -622,14 +685,31 @@ virtualservice.networking.istio.io/httpbin-org-virtual-service created
 
 ```text
 $ kubectl apply -f curl.API.yaml
-serviceentry.networking.istio.io/httpbin-org-service-entry created
-virtualservice.networking.istio.io/httpbin-org-virtual-service created
+namespace/curl-ns unchanged
+serviceaccount/curl-sa unchanged
+deployment.apps/curl-deploy configured
 ```
+
+1\. From the "Display dropbox", select "Traffic Distribution" and unselect "Traffic Rate" and "Service Nodes.
 
 ```text
 $ kubectl apply -f node-uuid.yaml
-...
+namespace/node-uuid-ns created
+serviceaccount/node-uuid-sa created
+deployment.apps/node-uuid-deploy created
+service/node-uuid created
 ```
+
+```text
+$ kubectl get pods -A
+NAMESPACE        NAME                                       READY   STATUS    RESTARTS   AGE
+curl-ns          curl-deploy-68b698bf7c-tqhhl               2/2     Running   0          3m29s
+httpbin-ns       httbin-deploy-6bf8fcb5c5-bxs9p             2/2     Running   0          13m
+...
+node-uuid-ns     node-uuid-deploy-5b798b5888-wb84f          2/2     Running   0          41s
+```
+
+1\. From the "Display dropbox", select "Idle Nodes".
 
 ```text
 $ kubectl apply -f mesh.A.80-20.yaml
